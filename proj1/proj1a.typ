@@ -9,7 +9,7 @@
 //       Matej Nedela
 //       Monowarul Sabbir
 // Date: 13/09/2026
-// Ver.: 1.0
+// Ver.: 1.1
 
 #set text(size: 9.5pt)
 #set page(margin: 1.25cm)
@@ -37,7 +37,7 @@ We have established a WhatsApp group for communication among the project members
 
 = Exploratory Analysis
 
-The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD004`) each with a training set, a test set and a vector of true remaining useful life (RUL) values, distinguished by operating conditions and fault modes, as shown in @tbl:subsets. Training data were loaded into Python as four matrices (20631, 53759, 24720, 61249 observations as rows and 26 predictors as columns). All further analysis in this report focuses on `FD001` (single condition, single fault mode) for clarity. However, the same steps will also be applied to the other subsets.
+The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD004`) each with a training set, a test set and a vector of true remaining useful life (RUL) values, distinguished by operating conditions and fault modes, as shown in @tbl:subsets. Training data were loaded into Python as four matrices (20631, 53759, 24720, 61249 observations as rows and 26 predictors as columns). All further exploratory analysis in this report focuses on `FD001` (single condition, single fault mode) for clarity. However, the same steps will also be applied to the other subsets.
 
 #figure(
   table(
@@ -52,7 +52,7 @@ The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD0
   caption: [_NASA Turbofan Jet Engine_ dataset subsets (all of them) and their characteristics.]
 ) <tbl:subsets>
 
-Each subset has 31 columns, starting with unit number, time (cycle), 3 operational settings and 26 sensor measurements, as shown in @tbl:columns, with symbols and physical meaning taken from _Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation_ (Saxena et al., 2008). The 3 operational settings (altitude, Mach number, TRA) take only 6 discrete combinations and could be treated as a single categorical attribute for operating condition.
+Each subset has 26 columns, starting with unit number, time (cycle), 3 operational settings and 21 sensor measurements, as shown in @tbl:columns, with symbols and physical meaning taken from _Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation_ (Saxena et al., 2008). The 3 operational settings (altitude, Mach number, TRA) take only 6 discrete combinations and could be treated as a single categorical attribute for operating condition.
 
 It has been verified that there are no missing values and that each unit's time series is continuous without any gaps. However, the units have varying lifetimes, as shown in histogram in @fig:histogram. Columns `T2`, `P2`, `Nf_dmd` and `PCNfR_dmd` have zero standard deviation within each operating condition and therefore are redundant for modelling. Other sensor scales differ by orders of magnitude and require normalization or standardization before modelling.
 
@@ -86,11 +86,23 @@ Given the two fault modes (HPC and fan degradation), sensors expected to be most
 
 = Principal Component Analysis
 
-TODO
+The principal component analysis was applied to all of the four subsets. Before applying the principal component analysis on the dataset, all sensor features were standardized to eliminate the scale difference and to ensure equal contribution to the variance calculation. After applying the principal component analysis, we took 2 principal component (PC) which reduced the high-dimensional complexity of the dataset but captured a substantial share of the total variance, though considerably more for `FD002` and `FD004` (both 97 %) than for `FD001` and `FD003` (74 % and 76 %, respectively). The high variance captured for `FD002` and `FD004` likely reflects the added variation from six operating conditions rather than degradation alone, motivating the per-condition normalization planned below.
+
+The biplots (@fig:biplots) and loading plots (@fig:loading_plots) clearly visualize the group of 21 sensors into distinct clusters based on their behaviors telling us which physical parameters (such as temperatures, pressures and speeds) share strong relation. Comparing the subsets highlights how operating environments change engine behavior. Datasets like `FD001` and `FD003` show smooth and unified degradation trajectories because they operate under constant conditions whereas `FD002` and `FD004` show multi-branched or scattered clusters due to varying altitude, Mach number and throttle settings. The loading vectors map out physical subsystems behavior, closely aligned sensor arrows (such as specific temperature and pressure pairings) indicating that thermal and aerodynamic subsystems tend to degrade together.
+
+#figure(
+  image("figs/biplots.svg"),
+  caption: [PCA biplots for all _NASA Turbofan Jet Engine_ subsets.],
+) <fig:biplots>
+
+#figure(
+  image("figs/loading_plots.svg"),
+  caption: [PCA loading plots for all _NASA Turbofan Jet Engine_ subsets.],
+) <fig:loading_plots>
 
 = Pretreatment
 
-TODO
+All sensor variables will be standardized before further analysis, and the four columns with zero variance (`T2`, `P2`, `Nf_dmd`, `PCNfR_dmd`) will be removed. No missing or extreme values were found. For `FD002` and `FD004`, sensor readings will additionally be normalized per operating condition before modelling, to separate degradation from changes in operating point.
 
 #pagebreak()
 
