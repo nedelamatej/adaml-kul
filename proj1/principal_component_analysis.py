@@ -8,8 +8,8 @@
 # Aut.: Moriom Akter
 #       Matej Nedela
 #       Monowarul Sabbir
-# Date: 13/09/2026
-# Ver.: 1.0
+# Date: 26/09/2026
+# Ver.: 1.1
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -67,9 +67,11 @@ for subset in subsets:
   results[subset] = {
     'explained_variance': pca.explained_variance_ratio_,
     'cumulative_variance': np.cumsum(pca.explained_variance_ratio_),
-    'loadings': pca.components_[:2, :],
-    'X_pca': X_pca
+    'X_pca': X_pca,
+    'loadings': pca.components_[:2, :]
   }
+
+  results[subset]['rul'] = (df.groupby('unit_id')['cycle'].transform('max') - df['cycle']).values
 
   loadings_matrix = pca.components_[:2, :]
 
@@ -78,7 +80,9 @@ for subset in subsets:
   print(f'PC1 =\n{loadings_matrix[0, :].round(4)}', end='\n\n')
   print(f'PC2 =\n{loadings_matrix[1, :].round(4)}', end='\n\n')
 
-# Biplots
+explained_variances = [results[subset]['explained_variance'] for subset in subsets]
+
+# Biplots before data pretreatment
 
 fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
 ax = ax.flatten()
@@ -86,6 +90,7 @@ ax = ax.flatten()
 for idx, subset in enumerate(subsets):
   X_pca = results[subset]['X_pca']
   loadings = results[subset]['loadings']
+  rul = results[subset]['rul']
 
   ax[idx].axis([-7.5, 12.5, -4, 8])
   ax[idx].grid(alpha=0.5)
@@ -93,27 +98,31 @@ for idx, subset in enumerate(subsets):
   ax[idx].axhline(0, color='grey', alpha=0.75, linestyle='--')
   ax[idx].axvline(0, color='grey', alpha=0.75, linestyle='--')
 
-  # randomly sample 1000 points for better visualization in the biplot
-  sample_idx = np.random.choice(X_pca.shape[0], min(1000, X_pca.shape[0]), replace=False)
-  ax[idx].scatter(X_pca[sample_idx, 0], X_pca[sample_idx, 1], color='blue', alpha=0.25)
+  sc = ax[idx].scatter(X_pca[:, 0], X_pca[:, 1], s=1, c=rul, alpha=0.5, vmin=0, vmax=90, cmap='YlOrRd_r')
 
   for i, name in enumerate(list(names.keys())[5:]):
-    ax[idx].arrow(0, 0, 10 * loadings[0, i], 10 * loadings[1, i], color='red', alpha=0.75, head_width=0.1, length_includes_head=True)
+    ax[idx].arrow(0, 0, 10 * loadings[0, i], 10 * loadings[1, i], color='black', alpha=0.5, head_width=0.1, length_includes_head=True)
 
   ax[idx].set_title(subset)
-  if (idx >= 2): ax[idx].set_xlabel('Principal component 1 (PC1)')
-  ax[idx].set_ylabel('Principal component 2 (PC2)')
+  if (idx >= 2): ax[idx].set_xlabel(f'Principal comp. 1 (PC1), {subsets[idx - 2]}: {explained_variances[idx - 2][0]:.2%}, {subsets[idx]}: {explained_variances[idx][0]:.2%}')
+  ax[idx].set_ylabel(f'Principal comp. 2 (PC2), {explained_variances[idx][1]:.2%}')
 
-plt.subplots_adjust(left=0.075, right=0.975, bottom=0.075, top=0.95)
-plt.savefig('figs/biplots.svg')
+plt.subplots_adjust(left=0.075, right=0.99, bottom=0.075, top=0.95)
+
+cbar = fig.colorbar(sc, ax=ax.tolist(), fraction=0.04, pad=0.02, aspect=30)
+cbar.set_ticks([0, 20, 70, 90])
+cbar.set_ticklabels(['0', '20', '70', '>90'])
+cbar.set_label('Remaining useful life', labelpad=-17.5)
+
+plt.savefig('figs/biplots_before.png', dpi=900)
 
 # Loading plots
 
 fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
 ax = ax.flatten()
 
-for idx, file in enumerate(subsets):
-  loadings = results[file]['loadings']
+for idx, subset in enumerate(subsets):
+  loadings = results[subset]['loadings']
 
   ax[idx].axis([-0.4, 0.4, -0.4, 0.8])
   ax[idx].grid(alpha=0.5)
@@ -122,12 +131,13 @@ for idx, file in enumerate(subsets):
   ax[idx].axvline(0, color='grey', alpha=0.75, linestyle='--')
 
   for i, name in enumerate(list(names.keys())[5:]):
-    ax[idx].arrow(0, 0, loadings[0, i], loadings[1, i], color='red', alpha=0.75, head_width=0.01, length_includes_head=True)
+    ax[idx].arrow(0, 0, loadings[0, i], loadings[1, i], color='black', alpha=0.5, head_width=0.01, length_includes_head=True)
     ax[idx].text(1.1 * loadings[0, i], 1.1 * loadings[1, i], name, color='green', alpha=0.5, fontsize=7, ha='center', va='center')
 
-  ax[idx].set_title(file)
-  if (idx >= 2): ax[idx].set_xlabel('Principal component 1 (PC1)')
-  ax[idx].set_ylabel('Principal component 2 (PC2)')
+  ax[idx].set_title(subset)
+  if (idx >= 2): ax[idx].set_xlabel(f'Principal comp. 1 (PC1), {subsets[idx - 2]}: {explained_variances[idx - 2][0]:.2%}, {subsets[idx]}: {explained_variances[idx][0]:.2%}')
+  ax[idx].set_ylabel(f'Principal comp. 2 (PC2), {explained_variances[idx][1]:.2%}')
 
-plt.subplots_adjust(left=0.075, right=0.975, bottom=0.075, top=0.95)
-plt.savefig('figs/loading_plots.svg')
+plt.subplots_adjust(left=0.075, right=0.935, bottom=0.075, top=0.95)
+
+plt.savefig('figs/loading_plots.png', dpi=900)
