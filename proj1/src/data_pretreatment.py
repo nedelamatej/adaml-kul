@@ -9,9 +9,10 @@
 #       Matej Nedela
 #       Monowarul Sabbir
 # Date: 26/09/2026
-# Ver.: 1.1
+# Ver.: 1.2
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
@@ -95,6 +96,7 @@ df_concat = pd.concat(dfs, ignore_index=True)
 
 plt.figure(figsize=(12, 3))
 plt.axis([35.3, 50.7, 0.5, 6.5])
+plt.grid(axis='x', alpha=0.5)
 
 plt.boxplot([df_concat[df_concat['op_cond'] == op_cond]['Ps30_raw'] for op_cond in op_conds['idx'][::-1]], orientation='horizontal', widths=0.6)
 
@@ -109,6 +111,7 @@ plt.savefig('figs/box_plot.svg')
 
 plt.figure(figsize=(12, 3))
 plt.axis([-120, 2520, 0.5, 5.5])
+plt.grid(axis='x', alpha=0.5)
 
 plt.violinplot([df_concat[f'{col}_raw'] for col in ['NRf', 'Nf', 'Ps30', 'P30', 'T30']], orientation='horizontal', widths=0.8)
 
@@ -123,6 +126,7 @@ plt.savefig('figs/violin_plot_before.svg')
 
 plt.figure(figsize=(12, 3))
 plt.axis([-11, 11, 0.5, 5.5])
+plt.grid(axis='x', alpha=0.5)
 
 plt.violinplot([df_concat[f'{col}'] for col in ['NRf', 'Nf', 'Ps30', 'P30', 'T30']], orientation='horizontal', widths=0.8)
 
@@ -179,3 +183,55 @@ cbar.set_ticklabels(['0', '20', '70', '>90'])
 cbar.set_label('Remaining useful life', labelpad=-17.5)
 
 plt.savefig('figs/biplots_after.png', dpi=900)
+
+# Corrected core speed (NRc)
+
+fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
+
+for i in range(2):
+  df_unit = dfs[3][dfs[3]['unit_id'] == i + 1]
+
+  for j in range(2):
+    if j == 0: ax[i, j].axis([-10, 360, 7800, 8200])
+    if j == 1: ax[i, j].axis([-10, 360, -2, 4])
+    ax[i, j].grid(alpha=0.5)
+
+    ax[i, j].plot(df_unit['cycle'], df_unit[f'NRc{"" if j else "_raw"}'], color='black', alpha=0.25, linewidth=1)
+    sc = ax[i, j].scatter(df_unit['cycle'], df_unit[f'NRc{"" if j else "_raw"}'], s=10, c=df_unit['op_cond'], vmin=0, vmax=9, cmap='tab10', zorder=1)
+
+    if i == 1: ax[i, j].set_xlabel('Cycle')
+    if j == 0: ax[i, j].set_ylabel(f'Unit {i + 1}, Raw NRc [rpm]')
+    if j == 0: ax[i, j].set_yticks(np.arange(7800, 8250, 50))
+    if j == 1: ax[i, j].set_ylabel(f'Unit {i + 1}, Standardized NRc')
+    if j == 1: ax[i, j].set_yticks(np.arange(-2, 4.75, 0.75))
+
+plt.legend(sc.legend_elements()[0], [f'Op. cond. {k}' for k in range(6)], ncol=3, loc='upper left', fontsize=8)
+
+plt.subplots_adjust(left=0.075, right=0.935, bottom=0.075, top=0.95)
+plt.savefig(f'figs/corrected_core_speed.png', dpi=900)
+
+# Bypass ratio (BPR)
+
+fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
+
+for i in range(2):
+  df_unit = dfs[3][dfs[3]['unit_id'] == i + 1]
+
+  for j in range(2):
+    if j == 0: ax[i, j].axis([-10, 360, 7.5, 11.5])
+    if j == 1: ax[i, j].axis([-10, 360, -5, 3])
+    ax[i, j].grid(alpha=0.5)
+
+    ax[i, j].plot(df_unit['cycle'], df_unit[f'BPR{"" if j else "_raw"}'], color='black', alpha=0.25, linewidth=1)
+    sc = ax[i, j].scatter(df_unit['cycle'], df_unit[f'BPR{"" if j else "_raw"}'], s=10, c=df_unit['op_cond'], vmin=0, vmax=9, cmap='tab10', zorder=1)
+
+    if i == 1: ax[i, j].set_xlabel('Cycle')
+    if j == 0: ax[i, j].set_ylabel(f'Unit {i + 1}, Raw BPR')
+    if j == 0: ax[i, j].set_yticks(np.arange(7.5, 11.75, 0.5))
+    if j == 1: ax[i, j].set_ylabel(f'Unit {i + 1}, Standardized BPR')
+    if j == 1: ax[i, j].set_yticks(np.arange(-5, 4, 1))
+
+plt.legend(sc.legend_elements()[0], [f'Op. cond. {k}' for k in range(6)], ncol=3, loc='lower left', fontsize=8)
+
+plt.subplots_adjust(left=0.075, right=0.935, bottom=0.075, top=0.95)
+plt.savefig(f'figs/bypass_ratio.png', dpi=900)
