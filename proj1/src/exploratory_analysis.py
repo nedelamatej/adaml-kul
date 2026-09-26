@@ -19,7 +19,7 @@ names = {
   "cycle":     "Time [cycle]",
   "altitude":  "Altitude [K ft]",
   "mach":      "Mach number",
-  "tra":       "Throttle resolver angle",
+  "throttle":  "Throttle resolver angle",
   "T2":        "Total temperature at fan inlet [°R]",
   "T24":       "Total temperature at LPC outlet [°R]",
   "T30":       "Total temperature at HPC outlet [°R]",
@@ -61,14 +61,14 @@ print(f'      cols: {df_fd004.shape[1]}', end='\n\n')
 
 df['altitude'] = df['altitude'].round(0)
 df['mach'] = df['mach'].round(2)
-df['tra'] = df['tra'].round(0)
+df['throttle'] = df['throttle'].round(0)
 
-print(f'Oper. set.: {df.groupby(["altitude", "mach", "tra"]).ngroups}', end='\n\n')
+print(f'Oper. set.: {df.groupby(["altitude", "mach", "throttle"]).ngroups}', end='\n\n')
 
 zero_sigma = []
 
 for name in list(names.keys())[5:]:
-  if df.groupby(['altitude', 'mach', 'tra'])[name].std().mean() == 0:
+  if df.groupby(['altitude', 'mach', 'throttle'])[name].std().mean() == 0:
     zero_sigma.append(name)
 
 print(f'Zero sigma: {", ".join(zero_sigma)}', end='\n\n')
