@@ -24,7 +24,7 @@ names = {
   "cycle":     "Time [cycle]",
   "altitude":  "Altitude [K ft]",
   "mach":      "Mach number",
-  "tra":       "Throttle resolver angle",
+  "throttle":  "Throttle resolver angle",
   "T2":        "Total temperature at fan inlet [°R]",
   "T24":       "Total temperature at LPC outlet [°R]",
   "T30":       "Total temperature at HPC outlet [°R]",
