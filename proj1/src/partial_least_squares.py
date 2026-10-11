@@ -9,7 +9,7 @@
 #       Matej Nedela
 #       Monowarul Sabbir
 # Date: 11/10/2026
-# Ver.: 1.0
+# Ver.: 1.1
 
 import textwrap
 
@@ -231,7 +231,7 @@ print(textwrap.fill(f"{', '.join(selected)} ({len(selected)} / {len(sensors)})",
 # Variable importance in projection plot
 
 
-fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
+fig, ax = plt.subplots(2, 2, figsize=(12, 5.25))
 ax = ax.flatten()
 
 for idx, subset in enumerate(subsets):
@@ -257,7 +257,7 @@ plt.savefig("figs/vip_score.svg")
 # R squared plot
 
 
-fig, ax = plt.subplots(2, 2, figsize=(12, 5.5))
+fig, ax = plt.subplots(2, 2, figsize=(12, 5.25))
 ax = ax.flatten()
 
 for idx, subset in enumerate(subsets):
@@ -361,8 +361,8 @@ for subset in subsets:
 
     print(f"\n{'-' * 17} {subset} {'-' * 17}")
     print(f"LVs:     {lv:0>2}")
-    print(f"R2:      {results[subset]['r2']:.2f}")
-    print(f"RMSE:    {results[subset]['rmse']:.2f}")
+    print(f"R2:      {results[subset]['r2']:0>5.2f}")
+    print(f"RMSE:    {results[subset]['rmse']:0>5.2f}")
 
 
 # R squared heatmap
