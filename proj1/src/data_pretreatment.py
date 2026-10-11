@@ -8,8 +8,8 @@
 # Aut.: Moriom Akter
 #       Matej Nedela
 #       Monowarul Sabbir
-# Date: 27/09/2026
-# Ver.: 1.3
+# Date: 11/10/2026
+# Ver.: 1.4
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -95,7 +95,7 @@ df_concat = pd.concat(dfs, ignore_index=True)
 
 # Box plot of static pressure at HPC outlet (Ps30) by operating condition
 
-plt.figure(figsize=(12, 3))
+plt.figure(figsize=(12, 2.75))
 plt.axis([35.3, 50.7, 0.5, 6.5])
 plt.grid(axis='x', alpha=0.5)
 
@@ -105,12 +105,12 @@ plt.xlabel('Static pressure at HPC outlet [psia]')
 plt.xticks(range(36, 50 + 1, 14 // 7))
 plt.yticks(range(1, len(op_conds['idx']) + 1), [f'Op. cond. {op_cond}' for op_cond in op_conds['idx'][::-1]])
 
-plt.subplots_adjust(left=0.075, right=0.975, bottom=0.15, top=0.95)
+plt.subplots_adjust(left=0.075, right=0.975, bottom=0.175, top=0.95)
 plt.savefig('figs/box_plot.svg')
 
 # Violin plot of key sensors before standardization
 
-plt.figure(figsize=(12, 3))
+plt.figure(figsize=(12, 2.75))
 plt.axis([-120, 2520, 0.5, 5.5])
 plt.grid(axis='x', alpha=0.5)
 
@@ -120,12 +120,12 @@ plt.xlabel('Raw value (temperature, pressure, static pressure or speed)')
 plt.xticks(range(0, 2400 + 1, 2400 // 10))
 plt.yticks(range(1, 6), ['NRf', 'Nf', 'Ps30', 'P30', 'T30'])
 
-plt.subplots_adjust(left=0.075, right=0.975, bottom=0.15, top=0.95)
+plt.subplots_adjust(left=0.075, right=0.975, bottom=0.175, top=0.95)
 plt.savefig('figs/violin_plot_before.svg')
 
 # Violin plot of key sensors after standardization
 
-plt.figure(figsize=(12, 3))
+plt.figure(figsize=(12, 2.75))
 plt.axis([-11, 11, 0.5, 5.5])
 plt.grid(axis='x', alpha=0.5)
 
@@ -135,7 +135,7 @@ plt.xlabel('Standardized value (z-score)')
 plt.xticks(range(-10, 10 + 1, 20 // 10))
 plt.yticks(range(1, 6), ['NRf', 'Nf', 'Ps30', 'P30', 'T30'])
 
-plt.subplots_adjust(left=0.075, right=0.975, bottom=0.15, top=0.95)
+plt.subplots_adjust(left=0.075, right=0.975, bottom=0.175, top=0.95)
 plt.savefig('figs/violin_plot_after.svg')
 
 # Biplots after data pretreatment
