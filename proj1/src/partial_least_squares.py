@@ -8,8 +8,8 @@
 # Aut.: Moriom Akter
 #       Matej Nedela
 #       Monowarul Sabbir
-# Date: 11/10/2026
-# Ver.: 1.1
+# Date: 22/10/2026
+# Ver.: 2.0
 
 import textwrap
 
@@ -17,9 +17,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
+from sklearn.compose import TransformedTargetRegressor
 from sklearn.cross_decomposition import PLSRegression
+from sklearn.kernel_approximation import Nystroem
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import GroupKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 names = {
     "unit_id": "Unit number",
@@ -144,6 +148,12 @@ def compute_rolling_mean(df, cols):
     return df
 
 
+def compute_rolling_slope(df, cols):
+    df[[f"{c}_slope" for c in cols]] = (df.groupby(["subset", "unit_id"])[cols].diff(10) / 10).fillna(0).values
+
+    return df
+
+
 df_train = load_df("train")
 df_test = load_df("test")
 
@@ -156,6 +166,9 @@ sensors = list(mean.columns)
 
 df_train = compute_rolling_mean(df_train, sensors)
 df_test = compute_rolling_mean(df_test, sensors)
+
+df_train = compute_rolling_slope(df_train, sensors)
+df_test = compute_rolling_slope(df_test, sensors)
 
 
 # Variable importance in projection
@@ -223,6 +236,7 @@ print(r2.sort_values("mean", ascending=False).round(2))
 
 
 selected = [sensors[i] for i in np.where((vip["mean"] > 0.5) & (r2["mean"] > 0.0))[0]]
+features = ["cycle"] + selected + [f"{sensor}_slope" for sensor in selected]
 
 print(f"\n{'-' * 16} Selected {'-' * 16}")
 print(textwrap.fill(f"{', '.join(selected)} ({len(selected)} / {len(sensors)})", width=42))
@@ -304,7 +318,19 @@ cbar.set_ticklabels(["-1", "0", "+1"])
 plt.savefig("figs/correlation_heatmap.svg")
 
 
-# Partial least squares
+# Kernel partial least squares
+
+
+def kernel_pls(lv):
+    return TransformedTargetRegressor(
+        regressor=make_pipeline(
+            StandardScaler(),
+            Nystroem(kernel="rbf", gamma=1 / len(features), n_components=300, random_state=0),
+            PLSRegression(n_components=lv),
+        ),
+        func=np.log1p,
+        inverse_func=np.expm1,
+    )
 
 
 results = {}
@@ -318,12 +344,12 @@ for subset in subsets:
 
     train_ids = train["unit_id"].values
 
-    x_train = train[selected].values
+    x_train = train[features].values
     y_train = train["rul"].values
-    x_test = test[selected].values
+    x_test = test[features].values
     y_test = test["rul"].values
 
-    for lv in range(1, len(selected)):
+    for lv in range(1, len(features)):
         # Q squared (Q2)
 
         q2_scores = []
@@ -332,7 +358,7 @@ for subset in subsets:
             x_fold, x_validation = x_train[train_idx], x_train[validation_idx]
             y_fold, y_validation = y_train[train_idx], y_train[validation_idx]
 
-            y_pred = PLSRegression(n_components=lv).fit(x_fold, y_fold).predict(x_validation).ravel().clip(0, 125)
+            y_pred = kernel_pls(lv).fit(x_fold, y_fold).predict(x_validation).ravel().clip(0, 125)
 
             q2_scores.append(r2_score(y_validation, y_pred))
 
@@ -340,14 +366,14 @@ for subset in subsets:
 
         # R squared (R2)
 
-        y_pred = PLSRegression(n_components=lv).fit(x_train, y_train).predict(x_test).ravel().clip(0, 125)
+        y_pred = kernel_pls(lv).fit(x_train, y_train).predict(x_test).ravel().clip(0, 125)
 
         lv_performance_r2[subset].append(r2_score(y_test, y_pred))
 
     q2 = np.array(lv_performance_q2[subset])
     lv = int(np.argmax(q2 >= q2.max() - 0.01)) + 1
 
-    model = PLSRegression(n_components=lv).fit(x_train, y_train)
+    model = kernel_pls(lv).fit(x_train, y_train)
     y_pred = model.predict(x_test).ravel().clip(0, 125)
 
     results[subset] = {
@@ -373,10 +399,10 @@ df_r2.columns = range(1, df_r2.shape[1] + 1)
 
 fig, ax = plt.subplots(figsize=(12, 3))
 
-ax.imshow(df_r2, vmin=0.6, vmax=0.8, aspect="auto")
+ax.imshow(df_r2, vmin=0.7, vmax=0.9, aspect="auto")
 
 for row, col in np.ndindex(df_r2.shape):
-    ax.text(col, row, f"{df_r2.iloc[row, col]:.3f}", ha="center", va="center")
+    ax.text(col, row, f"{df_r2.iloc[row, col]:.3f}".replace("0.", "."), ha="center", va="center", fontsize=10)
 
 for row, subset in enumerate(df_r2.index):
     col = results[subset]["lv"] - 1
@@ -390,7 +416,7 @@ ax.set_yticks(range(df_r2.shape[0]), df_r2.index)
 fig.colorbar(ax.images[0], ax=ax, fraction=0.04, pad=0.02, aspect=30)
 
 plt.subplots_adjust(left=0.075, right=0.99, bottom=0.15, top=0.95)
-plt.savefig("figs/r2_heatmap.svg")
+plt.savefig("figs/kpls_r2_heatmap.svg")
 
 
 # Q squared heatmap
@@ -401,10 +427,10 @@ df_q2.columns = range(1, df_q2.shape[1] + 1)
 
 fig, ax = plt.subplots(figsize=(12, 3))
 
-ax.imshow(df_q2, vmin=0.6, vmax=0.8, aspect="auto")
+ax.imshow(df_q2, vmin=0.7, vmax=0.9, aspect="auto")
 
 for row, col in np.ndindex(df_q2.shape):
-    ax.text(col, row, f"{df_q2.iloc[row, col]:.3f}", ha="center", va="center")
+    ax.text(col, row, f"{df_q2.iloc[row, col]:.3f}".replace("0.", "."), ha="center", va="center", fontsize=10)
 
 for row, subset in enumerate(df_q2.index):
     col = results[subset]["lv"] - 1
@@ -418,7 +444,7 @@ ax.set_yticks(range(df_q2.shape[0]), df_q2.index)
 fig.colorbar(ax.images[0], ax=ax, fraction=0.04, pad=0.02, aspect=30)
 
 plt.subplots_adjust(left=0.075, right=0.99, bottom=0.15, top=0.95)
-plt.savefig("figs/q2_heatmap.svg")
+plt.savefig("figs/kpls_q2_heatmap.svg")
 
 
 # Predicted vs observed
@@ -445,7 +471,7 @@ for idx, subset in enumerate(subsets):
     ax[idx].legend(loc="lower right")
 
 plt.subplots_adjust(left=0.075, right=0.935, bottom=0.075, top=0.95)
-plt.savefig("figs/predicted_vs_observed.svg")
+plt.savefig("figs/kpls_predicted_vs_observed.svg")
 
 
 # Residual analysis
@@ -474,4 +500,4 @@ for idx, subset in enumerate(subsets):
     ax[idx].legend(loc="lower left")
 
 plt.subplots_adjust(left=0.075, right=0.935, bottom=0.075, top=0.95)
-plt.savefig("figs/residual_analysis.svg")
+plt.savefig("figs/kpls_residual_analysis.svg")
