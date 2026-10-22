@@ -9,7 +9,7 @@
 //       Matej Nedela
 //       Monowarul Sabbir
 // Date: 22/10/2026
-// Ver.: 1.0
+// Ver.: 1.1
 
 #set text(size: 9.5pt)
 #set page(margin: 1.25cm)
@@ -42,7 +42,7 @@ We have established a WhatsApp group for communication among the project members
 
 = Exploratory Analysis
 
-The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD004`) each with a training set, a test set and a vector of true remaining useful life (RUL) values, distinguished by operating conditions and fault modes, as shown in @tbl:subsets. Training data were loaded into Python as four matrices (20631, 53759, 24720, 61249 observations as rows and 26 predictors as columns). All further exploratory analysis in this report focuses on `FD001` (single condition, single fault mode) for clarity. However, the same steps will also be applied to the other subsets.
+The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD004`) each with a training set, a test set and a vector of true remaining useful life (RUL) values, distinguished by operating conditions and fault modes, as shown in @tbl:subsets. Training data were loaded into Python as four matrices (20631, 53759, 24720, 61249 observations as rows and 26 columns). All further exploratory analysis in this report focuses on `FD001` (single condition, single fault mode) for clarity. However, the same steps will also be applied to the other subsets.
 
 #figure(
   table(
@@ -57,7 +57,7 @@ The _NASA Turbofan Jet Engine_ dataset consists of four subsets (`FD001` -- `FD0
   caption: [_NASA Turbofan Jet Engine_ dataset subsets (all of them) and their characteristics.]
 ) <tbl:subsets>
 
-Each subset has 26 columns, starting with unit number, time (cycle), 3 operational settings and 21 sensor measurements, as shown in @tbl:columns, with symbols and physical meaning taken from _Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation_ (Saxena et al., 2008). The 3 operational settings (altitude, Mach number, TRA) take only 6 discrete combinations and could be treated as a single categorical attribute for operating condition.
+Each subset has 26 columns, starting with unit number, time (cycle), 3 operational settings and 21 sensor measurements, as shown in @tbl:columns, with symbols and physical meaning taken from _Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation_ [4]. The 3 operational settings (altitude, Mach number, TRA) take only 6 discrete combinations and could be treated as a single categorical attribute for operating condition.
 
 It has been verified that there are no missing values and that each unit's time series is continuous without any gaps. However, the units have varying lifetimes, as shown in histogram in @fig:histogram. Columns `T2`, `P2`, `Nf_dmd` and `PCNfR_dmd` have zero standard deviation within each operating condition and therefore are redundant for modelling. Other sensor scales differ by orders of magnitude and require normalization or standardization before modelling.
 
@@ -66,7 +66,7 @@ It has been verified that there are no missing values and that each unit's time 
   caption: [Histogram of unit lifetimes for `FD001`.],
 ) <fig:histogram>
 
-Given the two fault modes (HPC and fan degradation), sensors expected to be most informative for RUL include `T30`, `P30`, `Ps30` (HPC outlet conditions), `Nf` and `NRf` (fan speed). Summary statistics and plots for the `FD001` HPC outlet sensors are shown in @tbl:predictors and @fig:predictors. It can be observed that the total temperature and static pressure at HPC outlet rise over the unit's lifetime.
+Given the fault modes across the subsets (HPC and fan degradation), sensors expected to be most informative for RUL include `T30`, `P30`, `Ps30` (HPC outlet conditions), `Nf` and `NRf` (fan speed). Summary statistics and plots for the `FD001` HPC outlet sensors are shown in @tbl:predictors and @fig:predictors. It can be observed that the total temperature and static pressure at HPC outlet rise over the unit's lifetime.
 
 #figure(
   table(
@@ -126,7 +126,7 @@ Data pretreatment starts with rounding the 3 operational settings to remove nois
   caption: [Lookup table of operating conditions.],
 ) <tbl:operating_conditions>
 
-After the operational conditions have been encoded as categorical variables, the remaining useful life (RUL) for each engine is calculated as shown in @eq:remaining_useful_life, where $u$ denotes the unit index, $t$ the cycle number, and $t_"max" (u)$ the unit's last recorded cycle. Remaining useful life is capped at 125 cycles. Early in its life, an engine operates in a healthy state and degradation is not yet observable in the sensor measurements (see @fig:predictors and @fig:bypass_ratio), so the data cannot distinguish RUL 200 from RUL 150. We focused on accurate predictions at low RUL, which are more relevant from a maintenance perspective, so a capped value is interpreted as "healthy". Model predictions are therefore clipped to $[0, 125]$ and a prediction of $125$ means healthy state with RUL $>= 125$. The true RUL of the test units is capped in the same way for evaluation.
+After the operational conditions have been encoded as categorical variables, the remaining useful life (RUL) for each engine is calculated as shown in @eq:remaining_useful_life, where $u$ denotes the unit index, $t$ the cycle number, and $t_"max" (u)$ the unit's last recorded cycle. Remaining useful life is capped at 125 cycles. Early in its life, an engine operates in a healthy state and degradation is not yet observable in the sensor measurements (see @fig:predictors and @fig:bypass_ratio), so the data cannot distinguish RUL 200 from RUL 150. We focused on accurate predictions at low RUL, which are more relevant from a maintenance perspective, so a capped value is interpreted as "healthy". Model predictions are therefore clipped to $[0, 125]$ and a prediction of $125$ means healthy state with RUL $>= 125$. The true RUL of the test units is capped in the same way for evaluation, using only the last cycle of each unit.
 
 $
   "RUL"(u, t) = min(t_"max" (u) - t, 125)
@@ -173,7 +173,7 @@ After standardization, a trailing rolling mean with a window of 10 cycles is app
   caption: [PCA biplots after data pretreatment for all _NASA Turbofan Jet Engine_ subsets.],
 ) <fig:biplots_after>
 
-Finally, the effect of standardization on the PCA biplots can be observed in @fig:biplots_after. In comparison with @fig:biplots_before, there are no longer separable clusters (in case of `FD002` and `FD004` which contain multiple operational conditions). The score points in `FD001` and `FD003` show similar shape and spread, as do those in `FD002` and `FD004`, indicating that standardization has effectively removed the influence of different operating conditions. The subsets with multiple fault modes (`FD003` and `FD004`) also show a visible split in the score trajectories, which may reflect the two underlying fault modes, although this cannot be confirmed without ground-truth labels.
+Finally, the effect of standardization on the PCA biplots can be observed in @fig:biplots_after. In comparison with @fig:biplots_before, there are no longer separable clusters (in case of `FD002` and `FD004` which contain multiple operational conditions). The score points in `FD001` and `FD002` show similar shape and spread, as do those in `FD003` and `FD004`, indicating that standardization has effectively removed the influence of different operating conditions. The subsets with multiple fault modes (`FD003` and `FD004`) also show a visible split in the score trajectories, which may reflect the two underlying fault modes, although this cannot be confirmed without ground-truth labels.
 
 = Modelling Plan
 
@@ -289,7 +289,7 @@ The number of latent variables was selected based on $Q^2$ cross-validation (@fi
   caption: [Initial PLS models predicted vs observed remaining useful life across all subsets (`FD001` -- `FD004`).],
 ) <fig:predicted_vs_observed>
 
-Residual analysis shown in @fig:residual_analysis provides similar information as @fig:predicted_vs_observed, showing that the residuals are within approximately $plus.minus 60$ cycles for all subsets. The diagonal lines of points in `FD002` and `FD004` are caused by the introduced RUL capping. The residuals also show a slight systematic pattern (overestimating predictions for $"RUL" in [20, 80]$), suggesting that the relation between sensor measurements and RUL is not fully linear. A non-linear PLS (e.g. kernel PLS) could therefore improve the predictions.
+Residual analysis shown in @fig:residual_analysis provides similar information as @fig:predicted_vs_observed, showing that the residuals (defined as true minus predicted RUL) are within approximately $plus.minus 60$ cycles for all subsets. The diagonal lines of points in `FD002` and `FD004` are caused by the introduced RUL capping. The residuals also show a slight systematic pattern (overestimating predictions for $"RUL" in [20, 80]$), suggesting that the relation between sensor measurements and RUL is not fully linear. A non-linear PLS (e.g. kernel PLS) could therefore improve the predictions.
 
 #figure(
   image("figs/residual_analysis.svg"),
@@ -345,9 +345,13 @@ The residuals improved notably between the initial PLS models and the final kPLS
 
 = References
 
-[1] Y. Lei, N. Li, L. Guo, N. Li, T. Yan, and J. Lin, "Machinery health prognostics: A systematic review from data acquisition to RUL prediction," _Mechanical Systems and Signal Processing_, vol. 104, pp. 799--834, 2018, doi: #link("https://doi.org/10.1016/j.ymssp.2017.11.016")[10.1016/j.ymssp.2017.11.016]. \
-[2] X.-S. Si, W. Wang, C.-H. Hu, and D.-H. Zhou, "Remaining useful life estimation -- A review on the statistical data driven approaches," _European Journal of Operational Research_, vol. 213, no. 1, pp. 1--14, 2011, doi: #link("https://doi.org/10.1016/j.ejor.2010.11.018")[10.1016/j.ejor.2010.11.018]. \
-[3] S. Wold, M. Sjöström, and L. Eriksson, "PLS-regression: a basic tool of chemometrics," _Chemometrics and Intelligent Laboratory Systems_, vol. 58, no. 2, pp. 109--130, 2001, doi: #link("https://doi.org/10.1016/S0169-7439(01)00155-1")[10.1016/S0169-7439(01)00155-1].
+During the preparation of this report, several research papers were reviewed to gain an understanding of the dataset and the underlying methods. The sources listed below provided the basis for the dataset description, the introductory background, the approach to RUL (remaining useful life) estimation, and the model implementation. The course lecture materials were also used throughout the work.
+
+[1] S.-P. Reinikainen and Z.-S. Duma, "Advanced Data Analysis and Machine Learning," Lecture materials and project feedback, School of Engineering Science, Lappeenranta-Lahti University of Technology, 2026. \
+[2] Y. Lei, N. Li, L. Guo, N. Li, T. Yan, and J. Lin, "Machinery health prognostics: A systematic review from data acquisition to RUL prediction," _Mechanical Systems and Signal Processing_, vol. 104, pp. 799--834, 2018, doi: #link("https://doi.org/10.1016/j.ymssp.2017.11.016")[10.1016/j.ymssp.2017.11.016]. \
+[3] X.-S. Si, W. Wang, C.-H. Hu, and D.-H. Zhou, "Remaining useful life estimation -- A review on the statistical data driven approaches," _European Journal of Operational Research_, vol. 213, no. 1, pp. 1--14, 2011, doi: #link("https://doi.org/10.1016/j.ejor.2010.11.018")[10.1016/j.ejor.2010.11.018]. \
+[4] A. Saxena, K. Goebel, D. Simon, and N. Eklund, "Damage propagation modeling for aircraft engine run-to-failure simulation," _International Conference on Prognostics and Health Management_, pp. 1--9, 2008, doi: #link("https://doi.org/10.1109/PHM.2008.4711414")[10.1109/PHM.2008.4711414]. \
+[5] S. Wold, M. Sjöström, and L. Eriksson, "PLS-regression: a basic tool of chemometrics," _Chemometrics and Intelligent Laboratory Systems_, vol. 58, no. 2, pp. 109--130, 2001, doi: #link("https://doi.org/10.1016/S0169-7439(01)00155-1")[10.1016/S0169-7439(01)00155-1].
 
 = Appendix
 
